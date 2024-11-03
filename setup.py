@@ -26,7 +26,11 @@ setup(
     },
     license="Apache License, Version 2.0",
     version=VERSION,
-    packages=["ynabkit"],
+    packages=[
+        "ynabkit",
+        "ynabkit.fineco",
+        "ynabkit.satispay",
+    ],
     entry_points="""
         [console_scripts]
         ynabkit=ynabkit.cli:cli

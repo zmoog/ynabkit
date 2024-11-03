@@ -3,11 +3,11 @@ import datetime
 import click
 from openpyxl import load_workbook
 
-from ynabkit.fineco.models import AccountTransaction
-from ynabkit.fineco.inputs import CreditCardTransactionsInput
-from ynabkit.fineco.outputs import CreditCardTransactionsOutput, AccountTransactionsOutput
-from ynabkit.satispay.inputs import TransactionsInput
-from ynabkit.satispay.outputs import TransactionsOutput
+from .fineco.models import AccountTransaction
+from .fineco.inputs import CreditCardTransactionsInput
+from .fineco.outputs import CreditCardTransactionsOutput, AccountTransactionsOutput
+from .satispay.inputs import TransactionsInput
+from .satispay.outputs import TransactionsOutput
 
 
 @click.group()

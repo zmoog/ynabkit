@@ -1,7 +1,7 @@
 from setuptools import setup
 import os
 
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 
 
 def get_long_description():
@@ -31,13 +31,15 @@ setup(
         [console_scripts]
         ynabkit=ynabkit.cli:cli
     """,
-    install_requires=["click"],
+    install_requires=[
+        "click",
+        "openpyxl",  # Required to read .xlsx files
+        "rich",
+        "xlrd",  # Required to read .xls files
+    ],
     extras_require={
         "test": [
-            "openpyxl",  # Required to read .xlsx files
             "pytest",
-            "rich",
-            "xlrd",  # Required to read .xls files
         ]
     },
     python_requires=">=3.10",

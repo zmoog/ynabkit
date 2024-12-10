@@ -1,5 +1,6 @@
 import io
 import json
+import sys
 from typing import Callable, List
 
 from rich.console import Console
@@ -10,9 +11,9 @@ from .models import AccountTransaction, CreditCardTransaction
 class AccountTransactionsOutput:
     """Output a list of AccountTransaction objects in a table or a CSV file"""
 
-    def __init__(self, transactions: List[AccountTransaction], resolve_payee: Callable[[str], str] = None):
+    def __init__(self, transactions: List[AccountTransaction], payee_resolver: Callable[[str], str] = None):
         self.transactions = transactions
-        self.resolve_payee = resolve_payee
+        self.payee_resolver = payee_resolver
 
     def table(self) -> str:
         """Output a table with the transactions"""
@@ -62,11 +63,17 @@ class AccountTransactionsOutput:
         
         writer = csv.writer(output)
         writer.writerow(["Date", "Payee", "Memo", "Amount"])
+        
+        missing_payees = set()
+
         for transaction in self.transactions:
             memo = f"{transaction.description}: {transaction.description_full}"
+            payee = self.resolve_payee(memo) if self.resolve_payee else None
+            if not payee:
+                missing_payees.add(memo)
             writer.writerow([
                 str(transaction.date),
-                self.resolve_payee(memo) if self.resolve_payee else "",
+                payee,
                 memo,
                 str(transaction.amount),
                 # transaction.description,
@@ -75,7 +82,11 @@ class AccountTransactionsOutput:
                 # transaction.moneymap_category,
             ])
         
-
+        if missing_payees:
+            print(f"No payee found for {len(missing_payees)} transactions", file=sys.stderr)
+            for memo in missing_payees:
+                print(f"  - {memo} ", file=sys.stderr)
+            
         return output.getvalue()
     
     def json(self) -> str:
@@ -85,9 +96,9 @@ class AccountTransactionsOutput:
 class CreditCardTransactionsOutput:
     """Output a list of CreditCardTransaction objects in a table or a CSV file"""
 
-    def __init__(self, transactions: List[CreditCardTransaction], resolve_payee: Callable[[str], str] = None):
+    def __init__(self, transactions: List[CreditCardTransaction], payee_resolver: Callable[[str], str] = None):
         self.transactions = transactions
-        self.resolve_payee = resolve_payee
+        self.payee_resolver = payee_resolver
 
     def table(self) -> str:
         """Output a table with the transactions"""
@@ -149,8 +160,9 @@ class CreditCardTransactionsOutput:
         for transaction in self.transactions:
             writer.writerow([
                 # formate the datetime as MM/DD/YYYY
-                transaction.transaction_date.strftime("%m/%d/%Y"),
-                transaction.transaction_date,
+                # transaction.transaction_date.strftime("%m/%d/%Y"),
+                transaction.registration_date.strftime("%m/%d/%Y"),
+                # transaction.transaction_date,
                 self.resolve_payee(transaction.description) if self.resolve_payee else "",
                 transaction.description,
                 str(transaction.amount),

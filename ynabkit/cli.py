@@ -1,6 +1,7 @@
 import datetime
-
 import click
+import yaml
+
 from openpyxl import load_workbook
 
 from .fineco.models import AccountTransaction
@@ -10,11 +11,27 @@ from .satispay.inputs import TransactionsInput
 from .satispay.outputs import TransactionsOutput
 from .n26.inputs import TransactionsInput as N26TransactionsInput
 from .n26.outputs import TransactionsOutput as N26TransactionsOutput
+from . import payee
+
+
+payee_resolver = payee.PayeeResolver()
+
 
 @click.group()
 @click.version_option()
-def cli():
+@click.option(
+    "-p",
+    "--payees-file",
+    help="Payees file",
+    type=click.Path(exists=True),
+    default="payees.yml",
+)
+def cli(payees_file: str):
     "CLI tool to support data import and export from YNAB"
+
+    with open(payees_file, "r") as f:
+        mappings = yaml.safe_load(f)
+        payee_resolver.load_mappings(mappings)
 
 
 @cli.group()
@@ -61,7 +78,7 @@ def describe_account_transactions(excel_file_name: str, output_format: str):
 
         transactions.append(t)
 
-    output = AccountTransactionsOutput(transactions, resolve_payee=resolve_payee)
+    output = AccountTransactionsOutput(transactions, payee_resolver=payee_resolver)
     if output_format == "table":
         click.echo(output.table())
     elif output_format == "csv":
@@ -97,7 +114,7 @@ def describe_card_transactions(excel_file_name: str, output_format: str, circuit
 
     transactions = input.read()
 
-    output = CreditCardTransactionsOutput(transactions, resolve_payee=resolve_payee)
+    output = CreditCardTransactionsOutput(transactions, payee_resolver=payee_resolver)
     if output_format == "table":
         click.echo(output.table())
     elif output_format == "csv":
@@ -135,7 +152,7 @@ def describe_transactions(excel_file_name: str, output_format: str, exclude_kind
 
     transactions = input.read()
 
-    output = TransactionsOutput(transactions, resolve_payee=resolve_payee)
+    output = TransactionsOutput(transactions, payee_resolver=payee_resolver)
     if output_format == "table":
         click.echo(output.table())
     elif output_format == "csv":
@@ -166,47 +183,10 @@ def describe_n26_transactions(csv_file_name: str, skip_header: bool, output_form
 
     transactions = N26TransactionsInput(csv_file_name, skip_header=skip_header).read() 
 
-    output = N26TransactionsOutput(transactions, payee_resolver=resolve_payee)
+    output = N26TransactionsOutput(transactions, payee_resolver=payee_resolver)
     if output_format == "table":
         click.echo(output.table())
     elif output_format == "csv":
         click.echo(output.csv())
     elif output_format == "json":
         click.echo(output.json())
-def resolve_payee(memo: str) -> str:
-    mappings = {
-        "audible.it": "Audible",
-        "Borello": "Borello",
-        "CARREFOUR": "Carrefour",
-        "Conad": "Conad",
-        "Coop": "Coop",
-        "Cinema Ideal": "Ideal Citiplex Torino",
-        "PAYPAL *DAZN": "DAZN",
-        "ELASTIC ITALY S.R.L.": "Elastic",
-        "Fatna": "Fatna",
-        "GOOGLE YOUTUBE": "YouTube",
-        "GRAMMARLY": "Grammarly",
-        "ILIAD Italia": "Iliad",
-        "Focaccia Siciliana": "Na' Focaccia Siciliana",
-        "LOCANDA 10038": "Pizzeria 10038",
-        "Lovet": "Lovet",
-        "MAXIMUM FUN MEDIA": "Maximum Fun",
-        "Netflix": "Netflix",
-        "Pane Amore e": "Cossa",
-        "PANIFICIO FAM FAVRO": "Favro",
-        "PLAYSTATION": "Sony",
-        "Prime Video": "Prime Video",
-        "QUALITY GROUP SOCIETA CONSORTILE": "Quality Group",
-        "STEAM GAMES ": "Steam",
-        "SPOTIFY": "Spotify",
-        "TELECOMITALIA SPA": "TIM",
-        "UnipolTech": "Unipol Tech",
-        "Vodafone": "Vodafone",
-        "WINDTRE RHO": "Wind",
-    }
-
-    for pattern, payee in mappings.items():
-        if pattern.casefold() in memo.casefold():
-            return payee
-        
-    return "" # default to empty string if no match is found

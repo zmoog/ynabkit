@@ -38,6 +38,7 @@ setup(
     install_requires=[
         "click",
         "openpyxl",  # Required to read .xlsx files
+        "PyYAML",
         "rich",
         "xlrd",  # Required to read .xls files
     ],

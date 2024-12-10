@@ -12,9 +12,9 @@ from .models import Transaction
 class TransactionsOutput:
     """Output a list of AccountTransaction objects in a table or a CSV file"""
 
-    def __init__(self, transactions: List[Transaction], resolve_payee: Callable[[str], str] = None):
+    def __init__(self, transactions: List[Transaction], payee_resolver: Callable[[str], str] = None):
         self.transactions = transactions
-        self.resolve_payee = resolve_payee
+        self.payee_resolver = payee_resolver
 
     def table(self) -> str:
         """Renders the transactions as a table."""
@@ -70,7 +70,7 @@ class TransactionsOutput:
             memo = f"{transaction.name}: {transaction.extra_info or ''}"
             writer.writerow([
                 transaction.date.strftime("%m/%d/%Y"),
-                self.resolve_payee(memo) if self.resolve_payee else "",
+                self.payee_resolver(memo) if self.payee_resolver else "",
                 memo,
                 str(transaction.amount),
             ])

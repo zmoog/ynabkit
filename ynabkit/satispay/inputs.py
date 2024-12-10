@@ -8,8 +8,9 @@ from .models import Transaction
 
 class TransactionsInput:
 
-    def __init__(self, excel_file: str):
+    def __init__(self, excel_file: str, exclude_kinds: List[str] = None):
         self.excel_file = excel_file
+        self.exclude_kinds = exclude_kinds
 
     def read(self) -> List[Transaction]:
         """Read a credit card statement and output a list of Transaction objects"""
@@ -19,6 +20,10 @@ class TransactionsInput:
 
         transactions = []
         for row in ws.iter_rows(min_row=2, max_col=8):
+            # Skip if the kind is in the exclude list
+            if self.exclude_kinds and row[3].value in self.exclude_kinds:
+                continue
+
             t = Transaction(
                 id=row[0].value,
                 name=row[1].value,

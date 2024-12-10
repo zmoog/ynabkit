@@ -117,10 +117,21 @@ def describe_card_transactions(excel_file_name: str, output_format: str, circuit
     type=click.Choice(["table", "csv", "json"]),
     default="table",
 )
-def describe_transactions(excel_file_name: str, output_format: str):
+@click.option(
+    "-e",
+    "--exclude-kinds",
+    help="Exclude kinds",
+    type=click.Choice([
+        "BANK",
+        "C2B",
+        "P2P",
+    ]),
+    default=None,
+)
+def describe_transactions(excel_file_name: str, output_format: str, exclude_kinds: str = None):
     "Read an .xlsx file containing credit card transactions and output the in a table or a CSV file"
  
-    input = TransactionsInput(excel_file_name)
+    input = TransactionsInput(excel_file_name, exclude_kinds=exclude_kinds)
 
     transactions = input.read()
 

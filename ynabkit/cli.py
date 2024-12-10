@@ -8,7 +8,8 @@ from .fineco.inputs import CreditCardTransactionsInput
 from .fineco.outputs import CreditCardTransactionsOutput, AccountTransactionsOutput
 from .satispay.inputs import TransactionsInput
 from .satispay.outputs import TransactionsOutput
-
+from .n26.inputs import TransactionsInput as N26TransactionsInput
+from .n26.outputs import TransactionsOutput as N26TransactionsOutput
 
 @click.group()
 @click.version_option()
@@ -24,6 +25,11 @@ def fineco():
 @cli.group()
 def satispay():
     "Satispay related commands"
+
+
+@cli.group()
+def n26():
+    "N26 related commands"
 
 
 @fineco.command(name="describe-account-transactions")
@@ -127,6 +133,35 @@ def describe_transactions(excel_file_name: str, output_format: str):
         click.echo(output.json())
 
 
+@n26.command(name="describe-transactions")
+@click.argument(
+    "csv-file-name",
+)
+@click.option(
+    "-s",
+    "--skip-header",
+    help="Skip the header row",
+    default=True,
+)
+@click.option(
+    "-o",
+    "--output-format",
+    help="Output format",
+    type=click.Choice(["table", "csv", "json"]),
+    default="table",
+)
+def describe_n26_transactions(csv_file_name: str, skip_header: bool, output_format: str):
+    "Read an .csv file containing N26 transactions and output the in a table or a CSV file"
+
+    transactions = N26TransactionsInput(csv_file_name, skip_header=skip_header).read() 
+
+    output = N26TransactionsOutput(transactions, payee_resolver=resolve_payee)
+    if output_format == "table":
+        click.echo(output.table())
+    elif output_format == "csv":
+        click.echo(output.csv())
+    elif output_format == "json":
+        click.echo(output.json())
 def resolve_payee(memo: str) -> str:
     mappings = {
         "audible.it": "Audible",

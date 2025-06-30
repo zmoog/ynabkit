@@ -1,11 +1,9 @@
-import datetime
-import click
+import sys
 import yaml
 
-from openpyxl import load_workbook
+import click
 
-from .fineco.models import AccountTransaction
-from .fineco.inputs import CreditCardTransactionsInput
+from .fineco.inputs import AccountTransactionsInput, CreditCardTransactionsInput
 from .fineco.outputs import CreditCardTransactionsOutput, AccountTransactionsOutput
 from .satispay.inputs import TransactionsInput
 from .satispay.outputs import TransactionsOutput
@@ -14,25 +12,34 @@ from .n26.outputs import TransactionsOutput as N26TransactionsOutput
 from . import payee
 
 
-payee_resolver = payee.PayeeResolver()
-
-
 @click.group()
 @click.version_option()
 @click.option(
     "-p",
     "--payees-file",
-    help="Payees file",
+    help="YAML file containing payee mappings",
     type=click.Path(exists=True),
     default="payees.yml",
 )
-def cli(payees_file: str):
+@click.pass_context
+def cli(ctx: click.Context, payees_file: str):
     "CLI tool to support data import and export from YNAB"
+    try:
+        with open(payees_file, "r") as f:
+            mappings = yaml.safe_load(f)
+            
+            payee_resolver = payee.PayeeResolver()
+            payee_resolver.load_mappings(mappings)
 
-    with open(payees_file, "r") as f:
-        mappings = yaml.safe_load(f)
-        payee_resolver.load_mappings(mappings)
+            ctx.ensure_object(dict)
+            ctx.obj["payee_resolver"] = payee_resolver
 
+    except Exception as e:
+        raise click.BadParameter(
+            f"Error loading payee mappings from {payees_file}: {e}",
+            param=ctx.params.get("payees_file"),
+            param_hint="payees-file",
+        ) from e
 
 @cli.group()
 def fineco():
@@ -60,33 +67,16 @@ def n26():
     type=click.Choice(["table", "csv", "json"]),
     default="table",
 )
-def describe_account_transactions(excel_file_name: str, output_format: str):
-    "Read an .xlsx file containing bank account transactions and output the in a table or a CSV file"
-    workbook = load_workbook(filename=excel_file_name)
-    ws = workbook.active
-
-    transactions = []
-    for row in ws.iter_rows(min_row=8, max_col=7):
-        t = AccountTransaction(
-            date=datetime.datetime.strptime(row[0].value, '%d/%m/%Y').date(),
-            amount=row[1].value or row[2].value,
-            description=row[3].value,
-            description_full=row[4].value,
-            state=row[5].value,
-            moneymap_category=row[6].value,
-        )
-
-        transactions.append(t)
-
-    output = AccountTransactionsOutput(transactions, payee_resolver=payee_resolver)
-    if output_format == "table":
-        click.echo(output.table())
-    elif output_format == "csv":
-        click.echo(output.csv())
-    elif output_format == "json":
-        click.echo(output.json())
-
-
+@click.pass_context
+def describe_account_transactions(ctx: click.Context, excel_file_name: str, output_format: str):
+    "Read an .xlsx file containing bank account transactions and output the in a table, CSV or JSON file"
+    payee_resolver = ctx.obj["payee_resolver"]
+    describe(
+        AccountTransactionsInput(excel_file_name, payee_resolver),
+        AccountTransactionsOutput(),
+        payee_resolver,
+        output_format,
+    )
 
 
 @fineco.command(name="describe-card-transactions")
@@ -107,21 +97,16 @@ def describe_account_transactions(excel_file_name: str, output_format: str):
     type=click.Choice(["ALL", "BANCOMAT", "VISA", "MASTERCARD"]),
     default="ALL",
 )
-def describe_card_transactions(excel_file_name: str, output_format: str, circuit: str = None):
+@click.pass_context
+def describe_card_transactions(ctx: click.Context, excel_file_name: str, output_format: str, circuit: str = None):
     "Read an .xlsx file containing credit card transactions and output the in a table or a CSV file"
- 
-    input = CreditCardTransactionsInput(excel_file_name, circuit=circuit)
-
-    transactions = input.read()
-
-    output = CreditCardTransactionsOutput(transactions, payee_resolver=payee_resolver)
-    if output_format == "table":
-        click.echo(output.table())
-    elif output_format == "csv":
-        click.echo(output.csv())
-    elif output_format == "json":
-        click.echo(output.json())
-
+    payee_resolver = ctx.obj["payee_resolver"]
+    describe(
+        CreditCardTransactionsInput(excel_file_name, payee_resolver, circuit=circuit),
+        CreditCardTransactionsOutput(),
+        payee_resolver,
+        output_format
+    )
 
 @satispay.command(name="describe-transactions")
 @click.argument(
@@ -145,21 +130,20 @@ def describe_card_transactions(excel_file_name: str, output_format: str, circuit
     ]),
     default=None,
 )
-def describe_transactions(excel_file_name: str, output_format: str, exclude_kinds: str = None):
+@click.pass_context
+def describe_transactions(ctx: click.Context, excel_file_name: str, output_format: str, exclude_kinds: str = None):
     "Read an .xlsx file containing credit card transactions and output the in a table or a CSV file"
- 
-    input = TransactionsInput(excel_file_name, exclude_kinds=exclude_kinds)
-
-    transactions = input.read()
-
-    output = TransactionsOutput(transactions, payee_resolver=payee_resolver)
-    if output_format == "table":
-        click.echo(output.table())
-    elif output_format == "csv":
-        click.echo(output.csv())
-    elif output_format == "json":
-        click.echo(output.json())
-
+    payee_resolver = ctx.obj["payee_resolver"]
+    describe(
+        TransactionsInput(
+            excel_file_name,
+            exclude_kinds=exclude_kinds,
+            payee_resolver=payee_resolver
+        ),
+        TransactionsOutput(),
+        payee_resolver,
+        output_format
+    )
 
 @n26.command(name="describe-transactions")
 @click.argument(
@@ -178,15 +162,34 @@ def describe_transactions(excel_file_name: str, output_format: str, exclude_kind
     type=click.Choice(["table", "csv", "json"]),
     default="table",
 )
-def describe_n26_transactions(csv_file_name: str, skip_header: bool, output_format: str):
+@click.pass_context
+def describe_n26_transactions(ctx: click.Context, csv_file_name: str, skip_header: bool, output_format: str):
     "Read an .csv file containing N26 transactions and output the in a table or a CSV file"
+    payee_resolver = ctx.obj["payee_resolver"]
+    describe(
+        N26TransactionsInput(
+            csv_file_name,
+            skip_header=skip_header,
+            payee_resolver=payee_resolver
+        ),
+        N26TransactionsOutput(),
+        payee_resolver,
+        output_format,
+    )
 
-    transactions = N26TransactionsInput(csv_file_name, skip_header=skip_header).read() 
 
-    output = N26TransactionsOutput(transactions, payee_resolver=payee_resolver)
-    if output_format == "table":
-        click.echo(output.table())
-    elif output_format == "csv":
-        click.echo(output.csv())
-    elif output_format == "json":
-        click.echo(output.json())
+def describe(input, output, payee_resolver: payee.PayeeResolver, format: str):
+    """Read from input and write to output in the specified format."""
+    transactions = input.read()
+    
+    if format == "table":
+        click.echo(output.table(transactions))
+    elif format == "csv":
+        click.echo(output.csv(transactions))
+    elif format == "json":
+        click.echo(output.json(transactions))
+    
+    if payee_resolver.unresolved:
+        click.echo(f"There are {len(payee_resolver.unresolved)} unresolved memos:", file=sys.stderr)
+        for memo in payee_resolver.unresolved:
+            click.echo(f"  - {memo}", file=sys.stderr)

@@ -12,4 +12,5 @@ class Transaction:
     amount: float
     currency: str
     extra_info: str
+    payee: str
     

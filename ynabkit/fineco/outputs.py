@@ -1,7 +1,8 @@
+import csv
 import io
 import json
 import sys
-from typing import Callable, List
+from typing import List, Callable
 
 from rich.console import Console
 from rich.table import Table
@@ -9,17 +10,13 @@ from rich.table import Table
 from .models import AccountTransaction, CreditCardTransaction
 
 class AccountTransactionsOutput:
-    """Output a list of AccountTransaction objects in a table or a CSV file"""
+    """Output a list of AccountTransaction objects in a table, CSV or JSON file"""
 
-    def __init__(self, transactions: List[AccountTransaction], payee_resolver: Callable[[str], str] = None):
-        self.transactions = transactions
-        self.payee_resolver = payee_resolver
-
-    def table(self) -> str:
+    def table(self, transactions: List[AccountTransaction]) -> str:
         """Output a table with the transactions"""
         console = Console(file=io.StringIO())
         
-        console.print(f"Found {len(self.transactions)} transactions")
+        console.print(f"Found {len(transactions)} transactions")
 
         # Create a new table
         table = Table(
@@ -35,8 +32,15 @@ class AccountTransactionsOutput:
         table.add_column("State")
         table.add_column("MoneyMap category")
 
+        total_in = 0
+        total_out = 0
+
         # Add rows
-        for transaction in self.transactions:
+        for transaction in transactions:
+            if transaction.amount > 0:
+                total_in += transaction.amount
+            else:
+                total_out += transaction.amount
             table.add_row(
                 str(transaction.date),
                 str(transaction.amount),
@@ -49,62 +53,56 @@ class AccountTransactionsOutput:
         # turn table into a string using the Console
         console.print(table)
 
+        summary_table = Table(
+            title="Summary",
+        )
+        summary_table.add_column("In")
+        summary_table.add_column("Out")
+        summary_table.add_column("Balance")
+        # format the balance to 2 decimal places:
+        summary_table.add_row(
+            f"{total_in:.2f}",
+            f"{total_out:.2f}",
+            f"{(total_in + total_out):.2f}")
+        console.print(summary_table)
+
         return console.file.getvalue()
 
-    def csv(self) -> str:
+    def csv(self, transactions: List[AccountTransaction]) -> str:
         """Output a CSV string with the transactions.
         
         It produces CSV using the YNAB format. See https://docs.youneedabudget.com/article/921-formatting-csv-file
         to learn more about the format.
         """
 
-        import csv
         output = io.StringIO()
         
         writer = csv.writer(output)
         writer.writerow(["Date", "Payee", "Memo", "Amount"])
         
-        missing_payees = set()
-
-        for transaction in self.transactions:
+        for transaction in transactions:
             memo = f"{transaction.description}: {transaction.description_full}"
-            payee = self.resolve_payee(memo) if self.resolve_payee else None
-            if not payee:
-                missing_payees.add(memo)
             writer.writerow([
                 str(transaction.date),
-                payee,
+                transaction.payee,
                 memo,
                 str(transaction.amount),
-                # transaction.description,
-                # transaction.description_full,
-                # transaction.state,
-                # transaction.moneymap_category,
             ])
         
-        if missing_payees:
-            print(f"No payee found for {len(missing_payees)} transactions", file=sys.stderr)
-            for memo in missing_payees:
-                print(f"  - {memo} ", file=sys.stderr)
-            
         return output.getvalue()
     
-    def json(self) -> str:
+    def json(self, transactions: List[AccountTransaction]) -> str:
         """Renders the transactions as a JSON string."""
-        return json.dumps(self.transactions, cls=AccountTransactionsEncoder, indent=4)
+        return json.dumps(transactions, cls=AccountTransactionsEncoder, indent=4)
 
 class CreditCardTransactionsOutput:
     """Output a list of CreditCardTransaction objects in a table or a CSV file"""
 
-    def __init__(self, transactions: List[CreditCardTransaction], payee_resolver: Callable[[str], str] = None):
-        self.transactions = transactions
-        self.payee_resolver = payee_resolver
-
-    def table(self) -> str:
+    def table(self, transactions: List[CreditCardTransaction]) -> str:
         """Output a table with the transactions"""
         console = Console(file=io.StringIO())
         
-        console.print(f"Found {len(self.transactions)} transactions")
+        console.print(f"Found {len(transactions)} transactions")
 
         # Create a new table
         table = Table(
@@ -117,6 +115,7 @@ class CreditCardTransactionsOutput:
         table.add_column("card_number")
         table.add_column("transaction_date")
         table.add_column("registration_date")
+        table.add_column("payee")
         table.add_column("description")
         table.add_column("operation_state")
         table.add_column("operation_type")
@@ -125,12 +124,13 @@ class CreditCardTransactionsOutput:
         table.add_column("amount")
 
         # Add rows
-        for transaction in self.transactions:
+        for transaction in transactions:
             table.add_row(
                 transaction.owner,
                 transaction.card_number,
                 str(transaction.transaction_date),
                 str(transaction.registration_date),
+                transaction.payee if transaction.payee else None,
                 transaction.description,
                 transaction.operation_state,
                 transaction.operation_type,
@@ -145,7 +145,7 @@ class CreditCardTransactionsOutput:
         return console.file.getvalue()
 
 
-    def csv(self) -> str:
+    def csv(self, transactions: List[CreditCardTransaction]) -> str:
         """Output a CSV string with the transactions.
         
         It produces CSV using the YNAB format. See https://docs.youneedabudget.com/article/921-formatting-csv-file
@@ -157,22 +157,22 @@ class CreditCardTransactionsOutput:
         
         writer = csv.writer(output)
         writer.writerow(["Date", "Payee", "Memo", "Amount"])
-        for transaction in self.transactions:
+        for transaction in transactions:
             writer.writerow([
                 # formate the datetime as MM/DD/YYYY
                 # transaction.transaction_date.strftime("%m/%d/%Y"),
                 transaction.registration_date.strftime("%m/%d/%Y"),
                 # transaction.transaction_date,
-                self.resolve_payee(transaction.description) if self.resolve_payee else "",
+                transaction.payee if transaction.payee else "",
                 transaction.description,
                 str(transaction.amount),
             ])
         
         return output.getvalue()
     
-    def json(self) -> str:
+    def json(self, transactions: List[CreditCardTransaction]) -> str:
         """Renders the transactions as a JSON string."""
-        return json.dumps(self.transactions, cls=CreditCardTransactionEncoder, indent=4)
+        return json.dumps(transactions, cls=CreditCardTransactionEncoder, indent=4)
 
 class AccountTransactionsEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -183,6 +183,7 @@ class AccountTransactionsEncoder(json.JSONEncoder):
             "description_full": obj.description_full,
             "state": obj.state,
             "moneymap_category": obj.moneymap_category,
+            "payee": obj.payee if obj.payee else None,
         }
 
 class CreditCardTransactionEncoder(json.JSONEncoder):
@@ -198,4 +199,5 @@ class CreditCardTransactionEncoder(json.JSONEncoder):
             "circuit": obj.circuit,
             "transaction_type": obj.transaction_type,
             "amount": obj.amount,
+            "payee": obj.payee if obj.payee else None,
         }   

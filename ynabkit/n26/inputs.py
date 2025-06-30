@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Callable
 import csv
 import datetime
 
@@ -6,9 +6,12 @@ from .models import Transaction
 
 
 class TransactionsInput:
-    def __init__(self, csv_file_name: str, skip_header: bool):
+    """Read a CSV file containing N26 transactions and output a list of Transaction objects"""
+
+    def __init__(self, csv_file_name: str, skip_header: bool, payee_resolver: Callable[[str], str]):
         self.csv_file_name = csv_file_name
         self.skip_header = skip_header
+        self.resolve_payee = payee_resolver
 
     def read(self) -> List[Transaction]:
         """Read a CSV file containing N26 transactions and output a list of Transaction objects"""
@@ -32,6 +35,7 @@ class TransactionsInput:
                     original_amount=float(row[8]),
                     original_currency=row[9],
                     exchange_rate=float(row[10]),
+                    payee=self.resolve_payee(row[2]),
                 ))
 
             return transactions

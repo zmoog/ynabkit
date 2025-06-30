@@ -15,3 +15,4 @@ class Transaction:
     original_amount: float
     original_currency: str
     exchange_rate: float
+    payee: str

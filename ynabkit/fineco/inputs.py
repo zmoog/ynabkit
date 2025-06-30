@@ -1,15 +1,47 @@
-from typing import List
+from typing import Callable, List
 import datetime
+import sys
 
 import xlrd
+from openpyxl import load_workbook
 
-from .models import CreditCardTransaction
+from .models import AccountTransaction, CreditCardTransaction
 
+
+class AccountTransactionsInput:
+    """Read an .xlsx file containing bank account transactions into a list of AccountTransaction objects"""
+
+    def __init__(self, excel_file: str, resolve_payee: Callable[[str], str]):
+        self.excel_file = excel_file
+        self.resolve_payee = resolve_payee
+
+    def read(self) -> List[AccountTransaction]:
+        """Read an .xlsx file containing bank account transactions into a list of AccountTransaction objects"""
+        workbook = load_workbook(filename=self.excel_file)
+        ws = workbook.active
+
+        transactions = []
+        for row in ws.iter_rows(min_row=8, max_col=7):
+            t = AccountTransaction(
+                date=datetime.datetime.strptime(row[0].value, '%d/%m/%Y').date(),
+                amount=row[1].value or row[2].value,
+                description=row[3].value,
+                description_full=row[4].value,
+                state=row[5].value,
+                moneymap_category=row[6].value,
+                payee=self.resolve_payee(row[4].value),
+            )
+
+            transactions.append(t)
+
+        return transactions
 
 class CreditCardTransactionsInput:
+    """Read a credit card statement and output a list of CreditCardTransaction objects"""
 
-    def __init__(self, excel_file: str, circuit: str = None):
+    def __init__(self, excel_file: str, resolve_payee: Callable[[str], str], circuit: str = None):
         self.excel_file = excel_file
+        self.resolve_payee = resolve_payee
         self.circuit = circuit
 
     def read(self) -> List[CreditCardTransaction]:
@@ -41,14 +73,7 @@ class CreditCardTransactionsInput:
             circuit = sheet.cell_value(row, 8)
             transaction_type = sheet.cell_value(row, 9)
             amount = sheet.cell_value(row, 10)
-
-            # print(f"{owner} {card_number} {transaction_date} {registration_date} {description} {operation_state} {circuit} {transaction_type} [{amount}]")
-            # print(f"{owner} {card_number} {transaction_date} {registration_date} {description} {operation_type} {circuit} {transaction_type} [{amount}]")
-            # print(f"{transaction_date} {description} [{amount}] ({circuit})")
-
-            # for col in range(1, sheet.ncols):
-            #     cell_value = sheet.cell_value(row, col)
-            #         print(cell_value)
+            payee = self.resolve_payee(description)
 
             if self.circuit != "ALL" and circuit != self.circuit:
                 continue
@@ -64,6 +89,7 @@ class CreditCardTransactionsInput:
                 circuit=circuit,
                 transaction_type=transaction_type,
                 amount=amount,
+                payee=payee,
             )
 
             transactions.append(transaction)

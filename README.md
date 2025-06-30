@@ -5,7 +5,7 @@
 [![Tests](https://github.com/zmoog/ynabkit/workflows/Test/badge.svg)](https://github.com/zmoog/ynabkit/actions?query=workflow%3ATest)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/zmoog/ynabkit/blob/master/LICENSE)
 
-YNAB Kit is a CLI tool to support data import and export from YNAB. It provides tools to convert data from Fineco and Satispay export files to YNAB CSV format.
+YNAB Kit is a CLI tool to support data import and export from YNAB. It provides tools to convert data from Fineco, N26, and Satispay export files to YNAB CSV format.
 
 ## Installation
 
@@ -15,7 +15,65 @@ Install this tool using `pip`:
 
 ## Usage
 
-For help, run:
+### Fineco Bank
+
+Convert Fineco bank export files to YNAB format:
+
+```bash
+# Basic conversion
+ynabkit fineco describe-transactions input.xlsx
+
+# With payee configuration
+ynabkit fineco describe-transactions input.xlsx --payees payees.yml
+```
+
+### N26 Bank
+
+Convert N26 bank export files to YNAB format:
+
+```bash
+# Basic conversion
+ynabkit n26 describe-transactions input.csv
+
+# With payee configuration
+ynabkit n26 describe-transactions input.csv --payees payees.yml
+```
+
+### Satispay
+
+Convert Satispay export files to YNAB format:
+
+```bash
+# Basic conversion
+ynabkit satispay describe-transactions input.csv
+
+# Exclude specific transaction types
+ynabkit satispay describe-transactions input.csv --exclude-kinds "Ricarica,Prelievo"
+
+# With payee configuration
+ynabkit satispay describe-transactions input.csv --payees payees.yml
+```
+
+### Payee Configuration
+
+Create a `payees.yml` file to map transaction descriptions to specific payees:
+
+```yaml
+- name: Amazon
+  patterns:
+  - "AMAZON"
+  - "AMAZON.*"
+- name: Spotify
+  patterns:
+  - "SPOTIFY"
+- name: Local Supermarket
+  patterns:
+  - ".*SUPERMARKET.*"
+  - "CONAD"
+  - "COOP"
+```
+
+For help with any command, run:
 
     ynabkit --help
 

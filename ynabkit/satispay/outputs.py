@@ -1,7 +1,7 @@
 import csv
 import io
 import json
-from typing import Callable, List
+from typing import List
 
 from rich.console import Console
 from rich.table import Table

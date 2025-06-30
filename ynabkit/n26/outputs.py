@@ -77,7 +77,7 @@ class TransactionsOutput:
     def json(self, transactions: List[Transaction]) -> str:
         """Output the transactions as a JSON string"""
         return json.dumps(transactions, cls=TransactionEncoder, indent=4)
-\
+
 class TransactionEncoder(json.JSONEncoder):
     def default(self, obj):
         return {

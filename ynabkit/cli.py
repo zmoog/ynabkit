@@ -178,15 +178,15 @@ def describe_n26_transactions(ctx: click.Context, csv_file_name: str, skip_heade
     )
 
 
-def describe(input, output, payee_resolver: payee.PayeeResolver, format: str):
+def describe(input, output, payee_resolver: payee.PayeeResolver, output_format: str):
     """Read from input and write to output in the specified format."""
     transactions = input.read()
     
-    if format == "table":
+    if output_format == "table":
         click.echo(output.table(transactions))
-    elif format == "csv":
+    elif output_format == "csv":
         click.echo(output.csv(transactions))
-    elif format == "json":
+    elif output_format == "json":
         click.echo(output.json(transactions))
     
     if payee_resolver.unresolved:

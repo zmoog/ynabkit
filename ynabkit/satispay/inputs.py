@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Callable
 import datetime
 
 from openpyxl import load_workbook
@@ -8,8 +8,10 @@ from .models import Transaction
 
 class TransactionsInput:
 
-    def __init__(self, excel_file: str):
+    def __init__(self, excel_file: str, payee_resolver: Callable[[str], str], exclude_kinds: List[str] = None):
         self.excel_file = excel_file
+        self.exclude_kinds = exclude_kinds
+        self.payee_resolver = payee_resolver
 
     def read(self) -> List[Transaction]:
         """Read a credit card statement and output a list of Transaction objects"""
@@ -19,6 +21,10 @@ class TransactionsInput:
 
         transactions = []
         for row in ws.iter_rows(min_row=2, max_col=8):
+            # Skip if the kind is in the exclude list
+            if self.exclude_kinds and row[3].value in self.exclude_kinds:
+                continue
+
             t = Transaction(
                 id=row[0].value,
                 name=row[1].value,
@@ -29,6 +35,7 @@ class TransactionsInput:
                 amount=self._parse_amount(row[5].value),
                 currency=row[6].value,
                 extra_info=row[7].value.rstrip() if row[7].value else None,
+                payee=self.payee_resolver(row[1].value),
             )
 
             transactions.append(t)

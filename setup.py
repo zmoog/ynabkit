@@ -1,7 +1,7 @@
 from setuptools import setup
 import os
 
-VERSION = "0.1.3"
+VERSION = "0.2.0"
 
 
 def get_long_description():
@@ -38,6 +38,7 @@ setup(
     install_requires=[
         "click",
         "openpyxl",  # Required to read .xlsx files
+        "PyYAML",
         "rich",
         "xlrd",  # Required to read .xls files
     ],

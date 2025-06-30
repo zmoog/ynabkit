@@ -1,7 +1,7 @@
 import csv
 import io
 import json
-from typing import Callable, List
+from typing import List
 
 from rich.console import Console
 from rich.table import Table
@@ -10,17 +10,13 @@ from .models import Transaction
 
 
 class TransactionsOutput:
-    """Output a list of AccountTransaction objects in a table or a CSV file"""
+    """Output a list of Transaction objects in a table or a CSV file"""
 
-    def __init__(self, transactions: List[Transaction], resolve_payee: Callable[[str], str] = None):
-        self.transactions = transactions
-        self.resolve_payee = resolve_payee
-
-    def table(self) -> str:
+    def table(self, transactions: List[Transaction]) -> str:
         """Renders the transactions as a table."""
         console = Console(file=io.StringIO())
         
-        console.print(f"Found {len(self.transactions)} transactions")
+        console.print(f"Found {len(transactions)} transactions")
 
         # Create a new table
         table = Table(
@@ -39,7 +35,7 @@ class TransactionsOutput:
         table.add_column("Extra info")
 
         # Add rows
-        for transaction in self.transactions:
+        for transaction in transactions:
             table.add_row(
                 transaction.id,
                 transaction.name,
@@ -56,7 +52,7 @@ class TransactionsOutput:
 
         return console.file.getvalue()
 
-    def csv(self) -> str:
+    def csv(self, transactions: List[Transaction]) -> str:
         """Renders the transactions as a CSV string.
         
         It produces CSV using the YNAB format. See https://docs.youneedabudget.com/article/921-formatting-csv-file
@@ -66,20 +62,20 @@ class TransactionsOutput:
         
         writer = csv.writer(output)
         writer.writerow(["Date", "Payee", "Memo", "Amount"])
-        for transaction in self.transactions:
+        for transaction in transactions:
             memo = f"{transaction.name}: {transaction.extra_info or ''}"
             writer.writerow([
                 transaction.date.strftime("%m/%d/%Y"),
-                self.resolve_payee(memo) if self.resolve_payee else "",
+                transaction.payee,
                 memo,
                 str(transaction.amount),
             ])
 
         return output.getvalue()
 
-    def json(self) -> str:
+    def json(self, transactions: List[Transaction]) -> str:
         """Renders the transactions as a JSON string."""
-        return json.dumps(self.transactions, cls=TransactionEncoder, indent=4)
+        return json.dumps(transactions, cls=TransactionEncoder, indent=4)
 
 
 class TransactionEncoder(json.JSONEncoder):
@@ -93,4 +89,5 @@ class TransactionEncoder(json.JSONEncoder):
             "amount": obj.amount,
             "currency": obj.currency,
             "extra_info": obj.extra_info,
+            "payee": obj.payee,
         }

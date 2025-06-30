@@ -14,6 +14,7 @@ class CreditCardTransaction:
     circuit: str
     transaction_type: str
     amount: float
+    payee: str
 
 
 @dataclasses.dataclass
@@ -24,4 +25,5 @@ class AccountTransaction:
     description_full: str
     state: str
     moneymap_category: str
+    payee: str
     

@@ -1,6 +1,5 @@
 from typing import Callable, List
 import datetime
-import sys
 
 import xlrd
 from openpyxl import load_workbook

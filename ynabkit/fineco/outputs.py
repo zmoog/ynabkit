@@ -130,7 +130,7 @@ class CreditCardTransactionsOutput:
                 transaction.card_number,
                 str(transaction.transaction_date),
                 str(transaction.registration_date),
-                transaction.payee if transaction.payee else None,
+                transaction.payee if transaction.payee else "",
                 transaction.description,
                 transaction.operation_state,
                 transaction.operation_type,

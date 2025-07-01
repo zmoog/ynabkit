@@ -16,3 +16,7 @@ class Transaction:
     original_currency: str
     exchange_rate: float
     payee: str
+
+    @property
+    def timestamp(self) -> datetime.datetime:
+        return self.booking_date

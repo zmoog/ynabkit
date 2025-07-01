@@ -13,4 +13,8 @@ class Transaction:
     currency: str
     extra_info: str
     payee: str
+
+    @property
+    def timestamp(self) -> datetime.datetime:
+        return self.date
     

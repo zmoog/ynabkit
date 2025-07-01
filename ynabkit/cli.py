@@ -1,6 +1,6 @@
 import sys
 import yaml
-
+import datetime
 import click
 
 from .fineco.inputs import AccountTransactionsInput, CreditCardTransactionsInput
@@ -21,8 +21,22 @@ from . import payee
     type=click.Path(exists=True),
     default="payees.yml",
 )
+@click.option(
+    "-s",
+    "--start-date",
+    help="Start date",
+    type=click.DateTime(),
+    default=None,
+)
+@click.option(
+    "-e",
+    "--end-date",
+    help="End date",
+    type=click.DateTime(),
+    default=None,
+)
 @click.pass_context
-def cli(ctx: click.Context, payees_file: str):
+def cli(ctx: click.Context, payees_file: str, start_date: datetime.datetime = None, end_date: datetime.datetime = None):
     "CLI tool to support data import and export from YNAB"
     try:
         with open(payees_file, "r") as f:
@@ -33,6 +47,8 @@ def cli(ctx: click.Context, payees_file: str):
 
             ctx.ensure_object(dict)
             ctx.obj["payee_resolver"] = payee_resolver
+            ctx.obj["start_date"] = start_date
+            ctx.obj["end_date"] = end_date
 
     except Exception as e:
         raise click.BadParameter(
@@ -76,6 +92,8 @@ def describe_account_transactions(ctx: click.Context, excel_file_name: str, outp
         AccountTransactionsOutput(),
         payee_resolver,
         output_format,
+        ctx.obj.get("start_date"),
+        ctx.obj.get("end_date"),
     )
 
 
@@ -105,7 +123,9 @@ def describe_card_transactions(ctx: click.Context, excel_file_name: str, output_
         CreditCardTransactionsInput(excel_file_name, payee_resolver, circuit=circuit),
         CreditCardTransactionsOutput(),
         payee_resolver,
-        output_format
+        output_format,
+        ctx.obj.get("start_date"),
+        ctx.obj.get("end_date"),
     )
 
 @satispay.command(name="describe-transactions")
@@ -142,7 +162,9 @@ def describe_transactions(ctx: click.Context, excel_file_name: str, output_forma
         ),
         TransactionsOutput(),
         payee_resolver,
-        output_format
+        output_format,
+        ctx.obj.get("start_date"),
+        ctx.obj.get("end_date"),
     )
 
 @n26.command(name="describe-transactions")
@@ -175,13 +197,20 @@ def describe_n26_transactions(ctx: click.Context, csv_file_name: str, skip_heade
         N26TransactionsOutput(),
         payee_resolver,
         output_format,
+        ctx.obj.get("start_date"),
+        ctx.obj.get("end_date"),
     )
 
 
-def describe(input, output, payee_resolver: payee.PayeeResolver, output_format: str):
+def describe(input, output, payee_resolver: payee.PayeeResolver, output_format: str, start_date: datetime.datetime = None, end_date: datetime.datetime = None):
     """Read from input and write to output in the specified format."""
     transactions = input.read()
     
+    if start_date:
+        transactions = [t for t in transactions if t.timestamp >= start_date]
+    if end_date:
+        transactions = [t for t in transactions if t.timestamp <= end_date]
+
     if output_format == "table":
         click.echo(output.table(transactions))
     elif output_format == "csv":

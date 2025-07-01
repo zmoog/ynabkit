@@ -16,6 +16,9 @@ class CreditCardTransaction:
     amount: float
     payee: str
 
+    @property
+    def timestamp(self) -> datetime.datetime:
+        return self.transaction_date
 
 @dataclasses.dataclass
 class AccountTransaction:
@@ -26,4 +29,8 @@ class AccountTransaction:
     state: str
     moneymap_category: str
     payee: str
+
+    @property
+    def timestamp(self) -> datetime.datetime:
+        return self.date
     

@@ -80,7 +80,12 @@ class AccountTransactionsOutput:
         output = io.StringIO()
         
         writer = csv.writer(output)
-        writer.writerow(["Date", "Payee", "Memo", "Amount"])
+        writer.writerow([
+            "Date",
+            "Payee",
+            "Memo",
+            "Amount",
+        ])
         
         for transaction in transactions:
             memo = f"{transaction.description}: {transaction.description_full}"

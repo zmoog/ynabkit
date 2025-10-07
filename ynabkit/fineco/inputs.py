@@ -10,9 +10,11 @@ from .models import AccountTransaction, CreditCardTransaction
 class AccountTransactionsInput:
     """Read an .xlsx file containing bank account transactions into a list of AccountTransaction objects"""
 
-    def __init__(self, excel_file: str, resolve_payee: Callable[[str], str]):
+    def __init__(self, excel_file: str, resolve_payee: Callable[[str], str], min_row: int = 11, max_col: int = 8):
         self.excel_file = excel_file
         self.resolve_payee = resolve_payee
+        self.min_row = min_row
+        self.max_col = max_col
 
     def read(self) -> List[AccountTransaction]:
         """Read an .xlsx file containing bank account transactions into a list of AccountTransaction objects"""
@@ -20,15 +22,26 @@ class AccountTransactionsInput:
         ws = workbook.active
 
         transactions = []
-        for row in ws.iter_rows(min_row=8, max_col=7):
+        for row in ws.iter_rows(min_row=self.min_row, max_col=self.max_col):
+            # Fields:
+            # ------------------------------------------------------------
+            # 0: Data_Operazione
+            # 1: Data_Valuta (not used)
+            # 2: Entrate
+            # 3: Uscite
+            # 4: Descrizione
+            # 5: Descrizione_Completa
+            # 6: Stato
+            # 7: Moneymap
+            # ------------------------------------------------------------
             t = AccountTransaction(
-                date=datetime.datetime.strptime(row[0].value, '%d/%m/%Y').date(),
-                amount=row[1].value or row[2].value,
-                description=row[3].value,
-                description_full=row[4].value,
-                state=row[5].value,
-                moneymap_category=row[6].value,
-                payee=self.resolve_payee(row[4].value),
+                date=row[0].value,
+                amount=row[2].value or row[3].value,
+                description=row[4].value,
+                description_full=row[5].value,
+                state=row[6].value,
+                moneymap_category=row[7].value,
+                payee=self.resolve_payee(row[5].value),
             )
 
             transactions.append(t)

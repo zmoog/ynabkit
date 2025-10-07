@@ -31,6 +31,7 @@ class AccountTransactionsOutput:
         table.add_column("Description full")
         table.add_column("State")
         table.add_column("MoneyMap category")
+        table.add_column("Payee")
 
         total_in = 0
         total_out = 0
@@ -48,6 +49,7 @@ class AccountTransactionsOutput:
                 transaction.description_full,
                 transaction.state,
                 transaction.moneymap_category,
+                transaction.payee,
             )
 
         # turn table into a string using the Console
@@ -78,12 +80,18 @@ class AccountTransactionsOutput:
         output = io.StringIO()
         
         writer = csv.writer(output)
-        writer.writerow(["Date", "Payee", "Memo", "Amount"])
+        writer.writerow([
+            "Date",
+            "Payee",
+            "Memo",
+            "Amount",
+        ])
         
         for transaction in transactions:
             memo = f"{transaction.description}: {transaction.description_full}"
             writer.writerow([
-                str(transaction.date),
+                # format the datetime as MM/DD/YYYY
+                transaction.date.strftime("%m/%d/%Y"),
                 transaction.payee,
                 memo,
                 str(transaction.amount),

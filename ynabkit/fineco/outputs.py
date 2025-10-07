@@ -85,7 +85,8 @@ class AccountTransactionsOutput:
         for transaction in transactions:
             memo = f"{transaction.description}: {transaction.description_full}"
             writer.writerow([
-                str(transaction.date),
+                # formate the datetime as MM/DD/YYYY
+                transaction.date.strftime("%m/%d/%Y"),
                 transaction.payee,
                 memo,
                 str(transaction.amount),

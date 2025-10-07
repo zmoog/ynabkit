@@ -31,6 +31,7 @@ class AccountTransactionsOutput:
         table.add_column("Description full")
         table.add_column("State")
         table.add_column("MoneyMap category")
+        table.add_column("Payee")
 
         total_in = 0
         total_out = 0
@@ -48,6 +49,7 @@ class AccountTransactionsOutput:
                 transaction.description_full,
                 transaction.state,
                 transaction.moneymap_category,
+                transaction.payee,
             )
 
         # turn table into a string using the Console

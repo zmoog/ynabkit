@@ -25,26 +25,26 @@ class TransactionsOutput:
         )
 
         # Add columns
-        table.add_column("ID")
+        # table.add_column("ID")
         table.add_column("Name")
         table.add_column("State")
         table.add_column("Kind")
         table.add_column("Date")
         table.add_column("Amount")
-        table.add_column("Currency")
-        table.add_column("Extra info")
+        # table.add_column("Currency")
+        # table.add_column("Extra info")
 
         # Add rows
         for transaction in transactions:
             table.add_row(
-                transaction.id,
+                # transaction.id,
                 transaction.name,
                 transaction.state,
                 transaction.kind,
                 str(transaction.date),
                 str(transaction.amount),
-                transaction.currency,
-                transaction.extra_info,
+                # transaction.currency,
+                # transaction.extra_info,
             )
 
         # turn table into a string using the Console

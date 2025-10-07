@@ -63,11 +63,10 @@ class TransactionsOutput:
         writer = csv.writer(output)
         writer.writerow(["Date", "Payee", "Memo", "Amount"])
         for transaction in transactions:
-            memo = f"{transaction.name}: {transaction.extra_info or ''}"
             writer.writerow([
                 transaction.date.strftime("%m/%d/%Y"),
                 transaction.payee,
-                memo,
+                transaction.name,
                 str(transaction.amount),
             ])
 

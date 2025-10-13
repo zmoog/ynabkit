@@ -38,11 +38,6 @@ class TransactionsInput:
             # 8: ID (not available)
             # ------------------------------------------------------------
             
-            print("--------------------------------")
-            for cell in row:
-                print(type(cell.value), cell.value)
-            print("--------------------------------")
-
             t = Transaction(
                 # id=row[8].value,
                 name=row[1].value,

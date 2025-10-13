@@ -80,13 +80,10 @@ class TransactionsOutput:
 class TransactionEncoder(json.JSONEncoder):
     def default(self, obj: Transaction):
         return {
-            "id": obj.id,
             "name": obj.name,
             "state": obj.state,
             "kind": obj.kind,
             "date": obj.date.isoformat(),
             "amount": obj.amount,
-            "currency": obj.currency,
-            "extra_info": obj.extra_info,
             "payee": obj.payee,
         }

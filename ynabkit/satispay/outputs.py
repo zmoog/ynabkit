@@ -25,26 +25,26 @@ class TransactionsOutput:
         )
 
         # Add columns
-        table.add_column("ID")
+        # table.add_column("ID")
         table.add_column("Name")
         table.add_column("State")
         table.add_column("Kind")
         table.add_column("Date")
         table.add_column("Amount")
-        table.add_column("Currency")
-        table.add_column("Extra info")
+        # table.add_column("Currency")
+        # table.add_column("Extra info")
 
         # Add rows
         for transaction in transactions:
             table.add_row(
-                transaction.id,
+                # transaction.id,
                 transaction.name,
                 transaction.state,
                 transaction.kind,
                 str(transaction.date),
                 str(transaction.amount),
-                transaction.currency,
-                transaction.extra_info,
+                # transaction.currency,
+                # transaction.extra_info,
             )
 
         # turn table into a string using the Console
@@ -63,11 +63,10 @@ class TransactionsOutput:
         writer = csv.writer(output)
         writer.writerow(["Date", "Payee", "Memo", "Amount"])
         for transaction in transactions:
-            memo = f"{transaction.name}: {transaction.extra_info or ''}"
             writer.writerow([
                 transaction.date.strftime("%m/%d/%Y"),
                 transaction.payee,
-                memo,
+                transaction.name,
                 str(transaction.amount),
             ])
 
@@ -81,13 +80,10 @@ class TransactionsOutput:
 class TransactionEncoder(json.JSONEncoder):
     def default(self, obj: Transaction):
         return {
-            "id": obj.id,
             "name": obj.name,
             "state": obj.state,
             "kind": obj.kind,
             "date": obj.date.isoformat(),
             "amount": obj.amount,
-            "currency": obj.currency,
-            "extra_info": obj.extra_info,
             "payee": obj.payee,
         }

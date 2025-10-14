@@ -22,24 +22,32 @@ class TransactionsInput:
         transactions = []
         for row in ws.iter_rows(min_row=2, max_col=8):
             # Skip if the kind is in the exclude list
-            if self.exclude_kinds and row[3].value in self.exclude_kinds:
+            if self.exclude_kinds and row[4].value in self.exclude_kinds:
                 continue
 
+            # Fields:
+            # ------------------------------------------------------------
+            # 0: Date
+            # 1: Name
+            # 2: Description
+            # 3: Amount
+            # 4: Type
+            # 5: Status
+            # 6: Balance
+            # 7: Balance after transaction
+            # 8: ID (not available)
+            # ------------------------------------------------------------
+            
             t = Transaction(
-                id=row[0].value,
                 name=row[1].value,
-                state=row[2].value,
-                kind=row[3].value,
-                # Parses dates in the format "18 Sep 2023 at 4:15:01 PM" format.
-                date=self._parse_date(row[4].value),
-                amount=self._parse_amount(row[5].value),
-                currency=row[6].value,
-                extra_info=row[7].value.rstrip() if row[7].value else None,
+                state=row[5].value,
+                kind=row[4].value,
+                date=row[0].value,
+                amount=row[3].value,
                 payee=self.payee_resolver(row[1].value),
             )
 
             transactions.append(t)
-
         return transactions
 
     def _parse_date(self, date_str: str) -> datetime.date:

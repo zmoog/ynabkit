@@ -144,9 +144,11 @@ def describe_card_transactions(ctx: click.Context, excel_file_name: str, output_
     "--exclude-kinds",
     help="Exclude kinds",
     type=click.Choice([
-        "BANK",
-        "C2B",
-        "P2P",
+        "🏦 From Bank",
+        "🏬 to a Store",
+        "👤 to Person",
+        "👤 from Person",
+        "📱 Mobile Top-up",
     ]),
     default=None,
 )

@@ -44,10 +44,10 @@ class TransactionsInput:
                 state=row[5].value,
                 kind=row[4].value,
                 # Parses dates in the format "18 Sep 2023 at 4:15:01 PM" format.
-                # date=self._parse_date(row[0].value),
-                date=row[0].value,
-                # amount=self._parse_amount(row[3].value),
-                amount=row[3].value,
+                date=self._parse_date(row[0].value),
+                # date=row[0].value,
+                amount=self._parse_amount(row[3].value),
+                # amount=row[3].value,
                 payee=self.payee_resolver(row[1].value),
             )
 

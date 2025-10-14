@@ -146,6 +146,8 @@ def describe_card_transactions(ctx: click.Context, excel_file_name: str, output_
     type=click.Choice([
         "🏦 From Bank",
         "🏬 to a Store",
+        "👤 to Person",
+        "👤 from Person",
         "📱 Mobile Top-up",
     ]),
     default=None,

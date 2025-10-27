@@ -45,10 +45,10 @@ class AccountTransactionsInput:
             # Ensure date is a datetime object
             if isinstance(date_value, str):
                 date_value = datetime.datetime.strptime(date_value, "%Y-%m-%d")
-            elif not isinstance(date_value, datetime.datetime):
-                # Handle date objects by converting to datetime
-                if hasattr(date_value, 'year'):
-                    date_value = datetime.datetime.combine(date_value, datetime.time())
+
+            # Ensure date is a datetime object
+            if not isinstance(date_value, datetime.datetime):
+                raise ValueError(f"Invalid date value: {date_value}. Expected a datetime object.")
 
             t = AccountTransaction(
                 date=date_value,

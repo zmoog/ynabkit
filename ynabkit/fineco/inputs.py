@@ -42,11 +42,11 @@ class AccountTransactionsInput:
             if not date_value or date_value == '-':
                 continue
 
-            # Ensure date is a datetime object
+            # Convert string dates to datetime objects
             if isinstance(date_value, str):
                 date_value = datetime.datetime.strptime(date_value, "%Y-%m-%d")
 
-            # Ensure date is a datetime object
+            # Validate date is a datetime object
             if not isinstance(date_value, datetime.datetime):
                 raise ValueError(f"Invalid date value: {date_value}. Expected a datetime object.")
 

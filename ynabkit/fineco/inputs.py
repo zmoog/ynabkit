@@ -59,7 +59,7 @@ class AccountTransactionsInput:
                 moneymap_category=row[7].value,
                 # Join description and description_full to create a
                 # unique key for the payee resolver
-                payee=self.resolve_payee(f"{row[4].value}: {row[5].value}"),
+                payee=self.resolve_payee(f"{row[4].value or ''}: {row[5].value or ''}"),
             )
 
             transactions.append(t)

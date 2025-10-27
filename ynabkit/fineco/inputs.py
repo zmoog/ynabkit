@@ -34,14 +34,32 @@ class AccountTransactionsInput:
             # 6: Stato
             # 7: Moneymap
             # ------------------------------------------------------------
+            date_value = row[0].value
+
+            # Skip rows with no Data_Operazione (empty or '-'):
+            # This means the transaction is not yet booked, so
+            # we skip it for now. It will be booked later.
+            if not date_value or date_value == '-':
+                continue
+
+            # Ensure date is a datetime object
+            if isinstance(date_value, str):
+                date_value = datetime.datetime.strptime(date_value, "%Y-%m-%d")
+            elif not isinstance(date_value, datetime.datetime):
+                # Handle date objects by converting to datetime
+                if hasattr(date_value, 'year'):
+                    date_value = datetime.datetime.combine(date_value, datetime.time())
+
             t = AccountTransaction(
-                date=row[0].value,
+                date=date_value,
                 amount=row[2].value or row[3].value,
                 description=row[4].value,
                 description_full=row[5].value,
                 state=row[6].value,
                 moneymap_category=row[7].value,
-                payee=self.resolve_payee(row[5].value),
+                # Join description and description_full to create a
+                # unique key for the payee resolver
+                payee=self.resolve_payee(f"{row[4].value}: {row[5].value}"),
             )
 
             transactions.append(t)

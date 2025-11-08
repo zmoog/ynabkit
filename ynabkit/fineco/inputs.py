@@ -10,7 +10,7 @@ from .models import AccountTransaction, CreditCardTransaction
 class AccountTransactionsInput:
     """Read an .xlsx file containing bank account transactions into a list of AccountTransaction objects"""
 
-    def __init__(self, excel_file: str, resolve_payee: Callable[[str], str], min_row: int = 11, max_col: int = 8):
+    def __init__(self, excel_file: str, resolve_payee: Callable[[str], str], min_row: int, max_col: int):
         self.excel_file = excel_file
         self.resolve_payee = resolve_payee
         self.min_row = min_row

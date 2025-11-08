@@ -83,12 +83,26 @@ def n26():
     type=click.Choice(["table", "csv", "json"]),
     default="table",
 )
+@click.option(
+    "-m",
+    "--min-row",
+    help="Minimum row to start reading from",
+    type=int,
+    default=11,
+)
+@click.option(
+    "-c",
+    "--max-col",
+    help="Maximum column to read to",
+    type=int,
+    default=8,
+)
 @click.pass_context
-def describe_account_transactions(ctx: click.Context, excel_file_name: str, output_format: str):
+def describe_account_transactions(ctx: click.Context, excel_file_name: str, output_format: str, min_row: int, max_col: int):
     "Read an .xlsx file containing bank account transactions and output the in a table, CSV or JSON file"
     payee_resolver = ctx.obj["payee_resolver"]
     describe(
-        AccountTransactionsInput(excel_file_name, payee_resolver),
+        AccountTransactionsInput(excel_file_name, payee_resolver, min_row, max_col),
         AccountTransactionsOutput(),
         payee_resolver,
         output_format,

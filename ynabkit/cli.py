@@ -22,6 +22,12 @@ from . import payee
     default="payees.yml",
 )
 @click.option(
+    "--payee-output-format",
+    help="Format for unknown payees output (list or yaml)",
+    type=click.Choice(["list", "yaml"]),
+    default="list",
+)
+@click.option(
     "-s",
     "--start-date",
     help="Start date",
@@ -36,17 +42,18 @@ from . import payee
     default=None,
 )
 @click.pass_context
-def cli(ctx: click.Context, payees_file: str, start_date: datetime.datetime = None, end_date: datetime.datetime = None):
+def cli(ctx: click.Context, payees_file: str, payee_output_format: str = "list", start_date: datetime.datetime = None, end_date: datetime.datetime = None):
     "CLI tool to support data import and export from YNAB"
     try:
         with open(payees_file, "r") as f:
             mappings = yaml.safe_load(f)
-            
+
             payee_resolver = payee.PayeeResolver()
             payee_resolver.load_mappings(mappings)
 
             ctx.ensure_object(dict)
             ctx.obj["payee_resolver"] = payee_resolver
+            ctx.obj["payee_output_format"] = payee_output_format
             ctx.obj["start_date"] = start_date
             ctx.obj["end_date"] = end_date
 
@@ -108,6 +115,7 @@ def describe_account_transactions(ctx: click.Context, excel_file_name: str, outp
         output_format,
         ctx.obj.get("start_date"),
         ctx.obj.get("end_date"),
+        ctx.obj.get("payee_output_format"),
     )
 
 
@@ -130,7 +138,7 @@ def describe_account_transactions(ctx: click.Context, excel_file_name: str, outp
     default="ALL",
 )
 @click.pass_context
-def describe_card_transactions(ctx: click.Context, excel_file_name: str, output_format: str, circuit: str = None):
+def describe_card_transactions(ctx: click.Context, excel_file_name: str, output_format: str, circuit: str):
     "Read an .xlsx file containing credit card transactions and output the in a table or a CSV file"
     payee_resolver = ctx.obj["payee_resolver"]
     describe(
@@ -140,6 +148,7 @@ def describe_card_transactions(ctx: click.Context, excel_file_name: str, output_
         output_format,
         ctx.obj.get("start_date"),
         ctx.obj.get("end_date"),
+        ctx.obj.get("payee_output_format"),
     )
 
 @satispay.command(name="describe-transactions")
@@ -167,7 +176,7 @@ def describe_card_transactions(ctx: click.Context, excel_file_name: str, output_
     default=None,
 )
 @click.pass_context
-def describe_transactions(ctx: click.Context, excel_file_name: str, output_format: str, exclude_kinds: str = None):
+def describe_transactions(ctx: click.Context, excel_file_name: str, output_format: str, exclude_kinds: str):
     "Read an .xlsx file containing credit card transactions and output the in a table or a CSV file"
     payee_resolver = ctx.obj["payee_resolver"]
     describe(
@@ -181,6 +190,7 @@ def describe_transactions(ctx: click.Context, excel_file_name: str, output_forma
         output_format,
         ctx.obj.get("start_date"),
         ctx.obj.get("end_date"),
+        ctx.obj.get("payee_output_format"),
     )
 
 @n26.command(name="describe-transactions")
@@ -215,13 +225,14 @@ def describe_n26_transactions(ctx: click.Context, csv_file_name: str, skip_heade
         output_format,
         ctx.obj.get("start_date"),
         ctx.obj.get("end_date"),
+        ctx.obj.get("payee_output_format"),
     )
 
 
-def describe(input, output, payee_resolver: payee.PayeeResolver, output_format: str, start_date: datetime.datetime = None, end_date: datetime.datetime = None):
+def describe(input, output, payee_resolver: payee.PayeeResolver, output_format: str, start_date: datetime.datetime = None, end_date: datetime.datetime = None, payee_output_format: str = "list"):
     """Read from input and write to output in the specified format."""
     transactions = input.read()
-    
+
     if start_date:
         transactions = [t for t in transactions if t.timestamp >= start_date]
     if end_date:
@@ -233,8 +244,24 @@ def describe(input, output, payee_resolver: payee.PayeeResolver, output_format: 
         click.echo(output.csv(transactions))
     elif output_format == "json":
         click.echo(output.json(transactions))
-    
+
     if payee_resolver.unresolved:
-        click.echo(f"There are {len(payee_resolver.unresolved)} unresolved memos:", file=sys.stderr)
-        for memo in payee_resolver.unresolved:
-            click.echo(f"  - {memo}", file=sys.stderr)
+        if payee_output_format == "yaml":
+            # Output as YAML format that can be appended to payees.yml
+            unresolved_payees = []
+            for memo in sorted(payee_resolver.unresolved):
+                unresolved_payees.append({
+                    "name": f"FIXME - {memo}",
+                    "patterns": [memo]
+                })
+            click.echo(
+                yaml.dump(unresolved_payees, default_flow_style=False, allow_unicode=True, sort_keys=False),
+                file=sys.stderr,
+                nl=False,
+
+            )
+        else:
+            # Default list format
+            click.echo(f"There are {len(payee_resolver.unresolved)} unresolved memos:", file=sys.stderr)
+            for memo in payee_resolver.unresolved:
+                click.echo(f"  - {memo}", file=sys.stderr)

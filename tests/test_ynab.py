@@ -1,6 +1,9 @@
 from click.testing import CliRunner
 from unittest.mock import Mock, patch
 import datetime
+import yaml
+import tempfile
+import os
 from ynabkit.cli import cli, describe
 from ynabkit.fineco.models import AccountTransaction
 from ynabkit import payee
@@ -112,3 +115,144 @@ def test_describe_date_filtering():
         describe(mock_input, mock_output, mock_payee_resolver, "table", start_date, end_date)
         filtered_transactions = mock_output.table.call_args[0][0]
         assert len(filtered_transactions) == 0
+
+
+def test_payees_add():
+    """Test the payees add command."""
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        # Create a temporary payees file
+        payees_file = "test_payees.yml"
+        initial_payees = [
+            {"name": "Existing Payee", "patterns": ["EXISTING"]}
+        ]
+        with open(payees_file, "w") as f:
+            yaml.dump(initial_payees, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+        # Test adding a new payee
+        result = runner.invoke(
+            cli,
+            ["-p", payees_file, "payees", "add"],
+            input="New Store\nNEW STORE PATTERN 1\nNEW STORE PATTERN 2\n\n"
+        )
+
+        assert result.exit_code == 0
+        assert "✓ Added payee 'New Store' with 2 pattern(s)" in result.output
+
+        # Verify the payee was added
+        with open(payees_file, "r") as f:
+            payees = yaml.safe_load(f)
+
+        assert len(payees) == 2
+        assert payees[0]["name"] == "Existing Payee"
+        assert payees[1]["name"] == "New Store"
+        assert payees[1]["patterns"] == ["NEW STORE PATTERN 1", "NEW STORE PATTERN 2"]
+
+
+def test_payees_add_no_patterns():
+    """Test the payees add command with no patterns (should abort)."""
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        # Create a temporary payees file
+        payees_file = "test_payees.yml"
+        initial_payees = [
+            {"name": "Existing Payee", "patterns": ["EXISTING"]}
+        ]
+        with open(payees_file, "w") as f:
+            yaml.dump(initial_payees, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+        # Test adding a payee with no patterns (just press enter for name, then enter for pattern)
+        result = runner.invoke(
+            cli,
+            ["-p", payees_file, "payees", "add"],
+            input="New Store\n\n"
+        )
+
+        assert result.exit_code == 0
+        assert "No patterns entered. Aborting." in result.output
+
+        # Verify no payee was added
+        with open(payees_file, "r") as f:
+            payees = yaml.safe_load(f)
+
+        assert len(payees) == 1
+        assert payees[0]["name"] == "Existing Payee"
+
+
+def test_payees_lint():
+    """Test the payees lint command."""
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        # Create a temporary payees file with unsorted payees
+        payees_file = "test_payees.yml"
+        unsorted_payees = [
+            {"name": "Zebra Store", "patterns": ["ZEBRA"]},
+            {"name": "Apple Store", "patterns": ["APPLE"]},
+            {"name": "Microsoft", "patterns": ["MSFT"]},
+            {"name": "Amazon", "patterns": ["AMZN"]},
+        ]
+        with open(payees_file, "w") as f:
+            yaml.dump(unsorted_payees, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+        # Run lint command
+        result = runner.invoke(cli, ["-p", payees_file, "payees", "lint"])
+
+        assert result.exit_code == 0
+        assert "✓ Sorted 4 payees" in result.output
+
+        # Verify payees are sorted
+        with open(payees_file, "r") as f:
+            payees = yaml.safe_load(f)
+
+        names = [p["name"] for p in payees]
+        assert names == ["Amazon", "Apple Store", "Microsoft", "Zebra Store"]
+        assert names == sorted(names, key=str.lower)
+
+
+def test_payees_lint_case_insensitive():
+    """Test that payees lint sorts case-insensitively."""
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        # Create a temporary payees file with mixed case names
+        payees_file = "test_payees.yml"
+        unsorted_payees = [
+            {"name": "zebra", "patterns": ["ZEBRA"]},
+            {"name": "Apple", "patterns": ["APPLE"]},
+            {"name": "MICROSOFT", "patterns": ["MSFT"]},
+            {"name": "amazon", "patterns": ["AMZN"]},
+        ]
+        with open(payees_file, "w") as f:
+            yaml.dump(unsorted_payees, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+        # Run lint command
+        result = runner.invoke(cli, ["-p", payees_file, "payees", "lint"])
+
+        assert result.exit_code == 0
+
+        # Verify payees are sorted case-insensitively
+        with open(payees_file, "r") as f:
+            payees = yaml.safe_load(f)
+
+        names = [p["name"] for p in payees]
+        assert names == ["amazon", "Apple", "MICROSOFT", "zebra"]
+
+
+def test_payees_lint_empty_file():
+    """Test that payees lint handles empty list gracefully."""
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        # Create a payees file with an empty list
+        payees_file = "test_payees.yml"
+        with open(payees_file, "w") as f:
+            yaml.dump([], f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+        # Run lint command
+        result = runner.invoke(cli, ["-p", payees_file, "payees", "lint"])
+
+        assert result.exit_code == 0
+        assert "✓ Sorted 0 payees" in result.output

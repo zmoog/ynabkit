@@ -79,6 +79,77 @@ def n26():
     "N26 related commands"
 
 
+@cli.group()
+@click.pass_context
+def payees(ctx: click.Context):
+    "Payees management commands"
+    # Store payees_file in the group context for subcommands
+    ctx.ensure_object(dict)
+    ctx.obj["payees_file"] = ctx.parent.params.get("payees_file", "payees.yml")
+
+
+@payees.command(name="add")
+@click.pass_context
+def payees_add(ctx: click.Context):
+    "Interactively add a new payee to the payees file"
+    payees_file = ctx.obj.get("payees_file", "payees.yml")
+
+    # Prompt for payee name
+    name = click.prompt("Payee name")
+
+    # Prompt for patterns (can add multiple)
+    patterns = []
+    click.echo("Enter patterns (one per line, empty line to finish):")
+    while True:
+        pattern = click.prompt("Pattern", default="", show_default=False)
+        if not pattern:
+            break
+        patterns.append(pattern)
+
+    if not patterns:
+        click.echo("No patterns entered. Aborting.", err=True)
+        return
+
+    # Create new payee entry
+    new_payee = {
+        "name": name,
+        "patterns": patterns
+    }
+
+    # Read existing payees
+    with open(payees_file, "r") as f:
+        existing_payees = yaml.safe_load(f) or []
+
+    # Add new payee
+    existing_payees.append(new_payee)
+
+    # Write back
+    with open(payees_file, "w") as f:
+        yaml.dump(existing_payees, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+    click.echo(f"✓ Added payee '{name}' with {len(patterns)} pattern(s) to {payees_file}")
+
+
+@payees.command(name="lint")
+@click.pass_context
+def payees_lint(ctx: click.Context):
+    "Sort payees by name in the payees file"
+    payees_file = ctx.obj.get("payees_file", "payees.yml")
+
+    # Read existing payees
+    with open(payees_file, "r") as f:
+        payees_list = yaml.safe_load(f) or []
+
+    # Sort by name (case-insensitive)
+    payees_list.sort(key=lambda p: p["name"].lower())
+
+    # Write back
+    with open(payees_file, "w") as f:
+        yaml.dump(payees_list, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+    click.echo(f"✓ Sorted {len(payees_list)} payees in {payees_file}")
+
+
 @fineco.command(name="describe-account-transactions")
 @click.argument(
     "excel-file-name",
